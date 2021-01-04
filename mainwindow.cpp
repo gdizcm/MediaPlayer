@@ -5,6 +5,8 @@
 #include <QDropEvent>
 #include <QList>
 #include <QMimeData>
+#include <QTime>
+#include <QWheelEvent>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -41,7 +43,11 @@ MainWindow::MainWindow(QWidget *parent) :
         qint64 newValue = ui->progressBar->value() * 1000;
         m_player->setPosition(newValue);
         b_moveSlider = true;
+        connect(m_player, SIGNAL(positionChanged(qint64)), this, SLOT(positionChange(qint64)));
     });
+    timeStatus = new QLabel(this);
+    timeStatus->setFrameStyle(QFrame::Box|QFrame::Sunken);
+    ui->statusBar->addPermanentWidget(timeStatus);
 
 }
 
@@ -118,6 +124,7 @@ void MainWindow::playFile()
         m_player->pause();
         ui->bt_Play->setText(tr("播放"));
     }
+
 }
 
 void MainWindow::stopVideo()
@@ -129,11 +136,18 @@ void MainWindow::stopVideo()
 }
 void MainWindow::positionChange(qint64 position)
 {
-    if(m_player->duration() != ui->progressBar->maximum())
+
+    if(m_player->duration()/1000 != ui->progressBar->maximum())
     {
         ui->progressBar->setMaximum(static_cast<int>(m_player->duration()/1000));
     }
     ui->progressBar->setValue(static_cast<int>(position/1000));
+
+    QTime initTime(0, 0, 0);
+    QTime curtime = initTime.addMSecs(static_cast<int>(position));
+    QTime totaltime = initTime.addMSecs(static_cast<int>(m_player->duration()));
+    timeStatus->clear();
+    timeStatus->setText(curtime.toString() + "/" +totaltime.toString());
 }
 
 void MainWindow::mouseReleaseEvent(QMouseEvent *event)
@@ -161,4 +175,20 @@ void MainWindow::dropEvent(QDropEvent *event)
     }
     openFile(urls.first().toLocalFile());
     QWidget::dropEvent(event);
+}
+
+void MainWindow::wheelEvent(QWheelEvent *event)
+{
+    QPoint numDegrees = event->angleDelta();
+    int volume = m_player->volume();
+    if (numDegrees.y() > 0)
+    {
+       volume++;
+    }
+    else
+    {
+        volume--;
+    }
+    m_player->setVolume(volume);
+    QMainWindow::wheelEvent(event);
 }

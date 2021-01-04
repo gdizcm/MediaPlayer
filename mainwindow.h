@@ -6,6 +6,7 @@
 #include <QMediaPlaylist>
 #include "videowidget.h"
 #include <QFileDialog>
+#include <QLabel>
 
 namespace Ui {
 class MainWindow;
@@ -31,6 +32,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void dragEnterEvent(QDragEnterEvent *);
     void dropEvent(QDropEvent *);
+    void wheelEvent(QWheelEvent *event);
 
 private:
     Ui::MainWindow *ui;
@@ -39,6 +41,7 @@ private:
     QMediaPlaylist *m_playlist;
     QMediaPlayer::State m_playerState;
     bool b_moveSlider;
+    QLabel *timeStatus;
 
 };
 
