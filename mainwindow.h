@@ -29,10 +29,10 @@ private slots:
     void positionChange(qint64 position);
 
 protected:
-    void mouseReleaseEvent(QMouseEvent *event);
     void dragEnterEvent(QDragEnterEvent *);
     void dropEvent(QDropEvent *);
     void wheelEvent(QWheelEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
 
 private:
     Ui::MainWindow *ui;

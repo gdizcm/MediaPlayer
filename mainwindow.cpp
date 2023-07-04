@@ -28,27 +28,17 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->bt_Play, SIGNAL(clicked()), this, SLOT(playFile()));
     connect(ui->bt_Stop, SIGNAL(clicked()), this, SLOT(stopVideo()));
 
-   /* connect(m_player, &QMediaPlayer::positionChanged, [this](qint64 position){
-        if(m_player->duration() != ui->progressBar->maximum())
-        {
-            ui->progressBar->setMaximum(m_player->duration()/1000);
-        }
-        qDebug()<<"position changed "<<position/1000;
-        ui->progressBar->setValue(position/1000);
-    });*/
     connect(m_player, SIGNAL(positionChanged(qint64)), this, SLOT(positionChange(qint64)));
-
-    connect(ui->progressBar, &QSlider::sliderMoved,[this](){
-        disconnect(m_player, SIGNAL(positionChanged(qint64)), this, SLOT(positionChange(qint64)));
-        qint64 newValue = ui->progressBar->value() * 1000;
-        m_player->setPosition(newValue);
-        b_moveSlider = true;
-        connect(m_player, SIGNAL(positionChanged(qint64)), this, SLOT(positionChange(qint64)));
+    connect(m_player, &QMediaPlayer::mediaStatusChanged, this, [=] (QMediaPlayer::MediaStatus status) {
+        if (status == QMediaPlayer::MediaStatus::EndOfMedia)
+        {
+            playFile();
+        }
     });
     timeStatus = new QLabel(this);
     timeStatus->setFrameStyle(QFrame::Box|QFrame::Sunken);
     ui->statusBar->addPermanentWidget(timeStatus);
-
+    ui->progressBar->installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
@@ -150,16 +140,6 @@ void MainWindow::positionChange(qint64 position)
     timeStatus->setText(curtime.toString() + "/" +totaltime.toString());
 }
 
-void MainWindow::mouseReleaseEvent(QMouseEvent *event)
-{
-    if (b_moveSlider)
-    {
-        connect(m_player, SIGNAL(positionChanged(qint64)), this, SLOT(positionChange(qint64)));
-    }
-    b_moveSlider = false;
-    QMainWindow::mouseReleaseEvent(event);
-}
-
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
     event->acceptProposedAction();
@@ -191,4 +171,34 @@ void MainWindow::wheelEvent(QWheelEvent *event)
     }
     m_player->setVolume(volume);
     QMainWindow::wheelEvent(event);
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == ui->progressBar)
+    {
+        if (event->type() == QEvent::MouseButtonRelease)
+        {
+            //获取当前鼠标位置
+            int currentX = static_cast<QMouseEvent*>(event)->x();
+            //计算当前位置占整个slider的百分比
+            double percentage = currentX*1.0/ui->progressBar->width();
+            //计算具体只
+            int value = percentage*(ui->progressBar->maximum() - ui->progressBar->minimum()) + ui->progressBar->minimum();
+            ui->progressBar->setValue(value);
+
+            qDebug()<<ui->progressBar->value();
+            qint64 newValue = ui->progressBar->value() * 1000;
+            if (!m_player->currentMedia().isNull())
+            {
+                m_player->setPosition(newValue);
+            }
+
+        }
+        else if (event->type() == QEvent::MouseButtonPress)
+        {
+            return true;
+        }
+    }
+    return QMainWindow::eventFilter(obj, event);
 }
